@@ -1,0 +1,38 @@
+- Spustenie -
+Program sa dá spustiť priamym spustením dokumentu Chess.py, otvorením
+Chess.py v preferovanom IDE a spustením z tade, alebo cez príkazový 
+riadok príkazom: python "adresa dokumentu"\Chess.py
+
+- Rozhranie - 
+Na ľavej strane obrazovky sa nachádza text, ktorý hovorí o tom, kto je
+na ťahu: WHITE MOVING pre bieleho, BLACK MOVING pre čierneho a pod daným
+textom sa taktiež zobrazí IN CHECK, ak je hráč, ktorý je práve na ťahu
+šachovaný. 
+Na pravej strane v hornom rohu je tlačidlo X, ktoré rozhranie vypne, a 
+napravo v strede sa nachádza tlačidlo RESIGN, ktorého stlačením sa hráč, 
+ktorý je práve na ťahu vzdá. 
+V strede obrazovky sa nachádza šachovnica, s figúrkami pripravenými na 
+štandardnú hru šachu. Podľa toho, kto je na ťahu, je možné kliknúť na 
+ktorúkoľvek figúrku danej farby a program vygeneruje možné pohyby pre danú 
+figúrku: políčka s modrým X sú prázdne políčka, kam je možné sa posunúť, 
+políčka so zeleným X sú políčka, kde je možné zobrať súperovu figúrku, a 
+na ostatné políčka nie je možné sa posunúť. Ak sú na šachovnici zobrazené 
+možné ťahy, je možné: kliknúť na ktorékoľvek políčko s X, a vybraný pohyb 
+sa prevedie, kliknúť na ktorékoľvek políčko bez X, alebo figúrky rovnakej 
+farby, kedy vygenerované ťahy zmiznú, alebo kliknúť na inú figúrku rovnakej 
+farby, kedy predošlé vygenerované ťahy zmiznú a hneď sa zobrazia vygenerované 
+ťahy pre novo-vybranú figúrku.
+Počas hry sa budú zobrazovať v ľavom hornom rohu všetky čierne figúrky, ktoré 
+biely hráč zobral, a v ľavom dolnom rohu všetky biele figúrky, ktoré zobral 
+čierny hráč. Tieto sú len informačné, a nijak nereagujú na klikanie.
+Po ukončení hry, či už cez Šach Mat, Pat, primálo materiálu na šachovnici,
+alebo tlačidlo RESIGN, sa zobrazí v strede obrazovky textová krabička, ktorá
+bude podľa výsledku hry obsahovať text: WHITE WINS ak vyhral biely hráč,
+BLACK WINS ak vyhral čierny hráč, DRAW ak zostalo primálo materiálu, alebo
+nastal Pat.
+Pod vyššie uvedeným textom sa nachádza tlačidlo s textom EXIT, ktoré vypne 
+rozhranie, a pod ním tlačidlo RESET, ktoré vráti rozhranie do začiatočného
+stavu a je možné ihneď začať novú hru.
+
+- Priebeh Hry -
+Pravidlá šachu je možné nájsť tu: www.sachovetreningy.sk/post/sach-pravidla-hry

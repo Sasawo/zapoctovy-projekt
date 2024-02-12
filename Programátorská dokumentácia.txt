@@ -1,0 +1,520 @@
+- Riešenie -
+
+Celé fungovanie tohoto šachu je založené na operáciách s binárnymi číslami. Každé
+políčko od ľavého horného až po pravý dolný roh má priradené binárne číslo, kde
+je na danom políčku 1 a všade inde 0. Rôzne potrebné kontroly vykonávam hlavne
+bitovými operáciami ako napr.: 
+
+kolízia dvoch figúrok je zisťovaná pomocou AND,
+
+vytváranie premennej, ktorá drží hodnoty pre všetky políčka na ktorých sú biele/
+čierne figúrky, je vytváraná pomocu OR
+
+generovanie ťahov je vykonávané pomocou BIT-SHIFTov
+
+invertovanie premennej, ktorá ukazuje, kde je možné blokovať šach je vykonávané
+pomocou XOR
+
+Toto riešenie určite nie je optimálnym riešením pre šach, pretože kvôli tomu, ako
+fungujú binárne čísla, je obtiažne zisťovať, či sa ťah zobrazí na správne miesto na
+šachovnici, pretože môže pretiecť cez pravý či ľavý okraj. Takýto problém by sa pri
+riešení šachovnice maticou nenaskytol, no návrhu tohoto programu som napísal, že 
+program spravím na základe binárnych čísel a operácií, a myslím si, že, i keď to 
+bolo oveľa obtiažnejšie touto cestou, tak som sa naučil riešiť problémy, ktoré by sa 
+mi pri riešení maticou nenaskytli a musel som si kvôli nim vyvynúť systém na generáciu
+ťahov, ktorý by som inak pravdepodobne nepotreboval.
+======================================================================================
+- Dôležité premenné -
+
+self.white = je to zoznam so šiestimi položkami, ktoré postupne držia integer hodnoty
+pre pozíciu každého typu figúrky: [kráľ, kráľovná, veže, strelci, jazdci, pešiaci].
+Po prevedení na binárne čisla, majú tieto hodnoty 1 na každom políčku kde sa nachádza
+daná biela figúrka a 0 všade inde.
+--------------------------------------------------------------------------------------
+
+self.black = je to zoznam so šiestimi položkami, ktoré postupne držia integer hodnoty
+pre pozíciu každého typu figúrky: [kráľ, kráľovná, veže, strelci, jazdci, pešiaci].
+Po prevedení na binárne čisla, majú tieto hodnoty 1 na každom políčku kde sa nachádza
+daná čierna figúrka a 0 všade inde.
+--------------------------------------------------------------------------------------
+
+self.whitetaken = je to zoznam, ktorý začína prázdny, no vždy, keď čierny zoberie bielemu
+figúrku, tak sa hodnota tej figúrky pridá sem, aby mohla byť vykreslená na strane 
+obrazovky ako zobratá. Hodoty figúrok sú: kráľ = 0, kráľovná = 1, veža = 2, strelec = 3,
+jazdec = 4, pešiak = 5. Táto premenná sa vždy pred vykreslením potriedi, aby neukazovala
+zobraté figúrky nezoradene.
+--------------------------------------------------------------------------------------
+
+self.blacktaken = je to zoznam, ktorý začína prázdny, no vždy, keď biely zoberie čiernemu
+figúrku, tak sa hodnota tej figúrky pridá sem, aby mohla byť vykreslená na strane 
+obrazovky ako zobratá. Hodoty figúrok sú: kráľ = 0, kráľovná = 1, veža = 2, strelec = 3,
+jazdec = 4, pešiak = 5. Táto premenná sa vždy pred vykreslením potriedi, aby neukazovala
+zobraté figúrky nezoradene.
+--------------------------------------------------------------------------------------
+
+self.whitecastle = je to zoznam, ktorý začína takto: [1, 1]. Ak sa pohne kráľ, mení sa na
+[0, 0], ak sa pohne ľavá veža, tak sa mení prvá 1 na 0, ak sa pohne pravá veža, tak sa
+mení druhá 1 na 0. 
+
+Podľa tohto krátkeho zoznamu sa neskôr kontroluje, na ktoré rozšády má biely hráč právo.
+--------------------------------------------------------------------------------------
+
+self.blackcastle = je to zoznam, ktorý začína takto: [1, 1]. Ak sa pohne kráľ, mení sa na
+[0, 0], ak sa pohne ľavá veža, tak sa mení prvá 1 na 0, ak sa pohne pravá veža, tak sa
+mení druhá 1 na 0. 
+
+Podľa tohto krátkeho zoznamu sa neskôr kontroluje, na ktoré rozšády má čierny hráč právo.
+--------------------------------------------------------------------------------------
+
+self.tot = je to zoznam, ktorý začína takto: [0, 0]. 
+
+Nasledovne sa na prvé miesto pomocou OR pridajú binárne pozície všetkých bielych figúrok, 
+čím získame hodnotu, ktorá má v binárnej reprezentácii 1 všade tam kde je biela figúrka, 
+inde 0. 
+
+Na druhé miesto sa rovnako pridajú binárne pozície všetkých čiernych figúrok, čím získame 
+hodnotu, ktorá má v binárnej reprezentácii 1 všade tam kde je čierna figúrka, inde 0. 
+
+Pomocou tejto premennej sa kontrolujú kolízie pri generovaní pohybov.
+
+Tejto premennej sa menia indexy nasledovne, vždy keď sa mení, kto je na ťahu:
+self.tot[0], self.tot[1] = self.tot[1], self.tot[0]
+--------------------------------------------------------------------------------------
+
+self.moving = je to zoznam, ktorý začína takto: 
+[0, self.white, self.black, 'self.white', 'self.black']. 
+
+Nultý index indikuje, aká fáza ťahu sa práve odohráva: 0 znamená, že nebola vybraná figúrka 
+na ťah, 1 znamená, že ťahy sú vykreslené a treba nejaký zvoliť, 2 znamená, že prebieha 
+rozšáda a 3 je pomocná po prebehnutí rozšády a odstraňuje nechcené artefakty.
+
+Prvý index vždy drží premennú s pozíciami figúrok hráča, ktorý je práve na rade.
+
+Druhý index vždy drží premennú s pozíciami figúrok hráča, ktorý práve nie je na rade.
+
+Tretí index vždy drží text, ktorý môže byť: "self.white", ak je na ťahu biely a "self.black"
+ak je na ťahu čierny.
+
+Štvrtý index vždy drží text, ktorý môže byť: "self.black", ak je na ťahu biely a "self.white"
+ak je na ťahu čierny.
+
+Tejto premennej sa menia indexy nasledovne, vždy keď sa mení, kto je na ťahu:
+self.moving = [self.moving[0], self.moving[2], self.moving[1], self.moving[4], self.moving[3]]
+--------------------------------------------------------------------------------------
+
+self.moves = je to zoznam, do ktorého funkcia self.movesForBoth() pridáva všetky možné pohyby,
+ktoré existujú pre práve vybranú figúrku, a cez ktorý prechádza funkcia self.generateMove(),
+aby vybrala pohyby, ktoré sú práve legálne s daným rozložením šachovnice.
+
+Tento zoznam môže vyzerať nasledovne:
+[['move', 'checkBorders', [2048, 11], [16, 4]], ['move', 'checkBorders', [33554432, 25], 
+[4294967296, 32], [549755813888, 39], [70368744177664, 46]], ['movetake', [9007199254740992, 53]], 
+['move', 'checkBorders'], ['move', 'checkBorders'], ['move', 'checkBorders', [131072, 17], 
+[65536, 16]], ['move', 'checkBorders', [524288, 19], [1048576, 20], [2097152, 21], [4194304, 22], 
+[8388608, 23], [16777216, 24], [33554432, 25], [67108864, 26]], ['move', 'checkCollision'], 
+['move', 'checkCollision', [67108864, 26], [17179869184, 34], [4398046511104, 42]], 
+['take', 'checkCollision', [1125899906842624, 50]]]
+
+Príznaky sú vysvetlené pri funkcii movesForBoth() spolu s číslami, ktoré sa nachádzajú vo
+vložených zoznamoch.
+--------------------------------------------------------------------------------------
+
+self.movement = je to zoznam, do ktorého funkcia self.generateMove() pridáva všetky legálne
+pohyby na prázdne políčko
+
+Tento zoznam môže vyzerať nasledovne:
+[262144, 2048, 16, 4294967296, 65536, 17179869184, 8796093022208, 4503599627370496, 16777216, 
+67108864, 131072, 8589934592, 2199023255552]
+
+Binárne reprezentácie tźchto čísel majú vždy 1 iba na pozícii, kam vyúsťuje ťah.
+--------------------------------------------------------------------------------------
+
+self.taking = je to zoznam, do ktorého funkcia self.generateMove() pridáva všetky legálne
+pohyby, ktoré berú súperovi figúrku
+
+Tento zoznam môže vyzerať nasledovne:
+[2305843009213693952, 562949953421312]
+
+Binárne reprezentácie tźchto čísel majú vždy 1 iba na pozícii, kam vyúsťuje ťah.
+--------------------------------------------------------------------------------------
+
+self.castling = je to zoznam, do ktorého funkcia self.generateMove() pridáva všetky legálne
+pohyby, ktoré sú rozšádou
+
+Tento zoznam môže vyzerať nasledovne:
+[2, 32]
+
+Binárne reprezentácie tźchto čísel majú vždy 1 iba na pozícii, kam vyúsťuje ťah kráľa.
+--------------------------------------------------------------------------------------
+
+self.bounds = je to integer hodnota, ktorá má v binárnej reprezentácii 1 v prvom a poslednom
+stĺpci šachovnice, inde 0. Je využívaná na kontrolu pretečenia čísla cez okraj šachovnice.
+--------------------------------------------------------------------------------------
+
+self.checked = je to premenná, ktorú vracia funkcia self.checkCheck(), a obsahuje integer
+hodnotu, podľa toho, koľko figúriek šachuje dané políčko. Kvôli mnohým kontrolám, ktoré
+tiež využívajú self.checkCheck() je pri kontrolách vo funkcii self.generateMoves()
+nahradená premennou self.checksave, a pri vykreslovaní textu, ktorý informuje o šachovanosti
+hráčov, premennou self.checktxt. Obe tieto premenné si pre svoje účely v iných bodoch programu
+uložia hodnotu self.checked, aby ju mohli ďalej využiť.
+--------------------------------------------------------------------------------------
+
+self.checksave = je to pomocná premenná, ktorá po trvanie funkcie self.generateMoves() drží
+hodnotu šachovanosti kráľa
+--------------------------------------------------------------------------------------
+
+self.checktxt = je to pomocná premenná, ktorá po trvanie všetkých funkcii drží hodnotu 
+šachovanosti kráľa, aby mohla na konci byť použitá ako kotrola pre vykreslenie textu
+IN CHECK
+--------------------------------------------------------------------------------------
+
+self.checkblock = je to premenná, ktorá obsahuje integer hodnotu, v ktorej binárnej
+reprezentácii je 1 všade kde je možné blokovať šach kráľa, 0 inde. Ak je kráľ šachovaný
+je využívaná na kontrolu ťahov iných figúrok. Ak kráľ šachovaný nie je, tak je 0.
+--------------------------------------------------------------------------------------
+
+self.whiteenpass = je to premenná, ktorá si 1 ťah po pohnutí bieleho pešiaka o 2 políčka,
+pamätá hodnotu políčka, ktoré pešiak preskočil. Je využívaná na kontrolu en passant
+čiernym pešiakom.
+--------------------------------------------------------------------------------------
+
+self.blackenpass = je to premenná, ktorá si 1 ťah po pohnutí čierneho pešiaka o 2 políčka,
+pamätá hodnotu políčka, ktoré pešiak preskočil. Je využívaná na kontrolu en passant
+bielym pešiakom.
+--------------------------------------------------------------------------------------
+
+self.x = je to premenná, ktorá obsahuje hodnoty 0 - 7, podľa toho, v ktorom stĺpci
+šachovnice sa odohralo posledné kliknutie
+--------------------------------------------------------------------------------------
+
+self.y = je to premenná, ktorá obsahuje hodnoty 0 - 7, podľa toho, v ktorom riadku
+šachovnice sa odohralo posledné kliknutie
+--------------------------------------------------------------------------------------
+
+self.check = je to premenná, ktorá drží integer hodnotu, ktorej binárna reprezentácia má
+1 na políčku posledného kliknutia, inde 0
+--------------------------------------------------------------------------------------
+
+self.save =  je to premenná, ktorá po vygenerovaní ťahu obsahuje zoznam o dvoch prvkoch.
+Prvý z nich je self.check a druhý index figúrky v self.white alebo self.black, podľa toho
+kto je na ťahu
+--------------------------------------------------------------------------------------
+
+self.stopdraw = je to premenná, ktorá po zobrazení tabuľky konca hry zabraňuje textu o ťahu,
+aby sa ďalej vykresľoval
+======================================================================================
+
+- Funkcie a Triedy-
+
+Update:
+Táto trieda obsahuje všetky nasledovné funkcie.
+--------------------------------------------------------------------------------------
+
+__init__(self):
+
+Táto funkcia vytvorí inštanciu tkinter Canvasu, získa dimenzie monitora,
+podľa ktorých stanový dimenzie a umiestnenie všetkých objektov na Canvase.
+Taktiež vytvorí tlačidlo na zavretie Canvasu a umiestni ho do pravého 
+horného rohu obrazovky a tlačidlo na ukončnie hry šachu vzdaním sa a umiestni 
+ho napravo do stredu obrazovky. 
+
+Po ukončení funkcie volá funkciu self.reset()
+--------------------------------------------------------------------------------------
+
+reset(self, first=None):
+
+Táto funkcia vytvorí vzor šachovnice do stredu obrazovky a inicializuje potrebné
+premenné. Tiež ku Canvasu pripojí event ľavého tlačidla myši, na používanie 
+rozhrania. 
+
+Parameter first, ktorý prijíma nie je None len, keď je funkcia volaná
+z funkcie __init__(), pretože vymazáva a posúva z obrazovky tlačidlá a objekty,
+ktoré sa vytvárajú až neskôr v tejto funkcii, a teda pri prvom volaní funkcie ešte
+neexistujú. 
+
+Po ukončení funkcie volá funkciu self.generate()
+--------------------------------------------------------------------------------------
+
+generate(self):
+
+Táto funkcia generuje rozostavenie figúrok na šachovnici vždy, keď je to potrebné,
+taktiež generuje text v strede naľavo na obrazovke, ktorý notifikuje používateľa o 
+tom, kto je na ťahu. Tiež vygeneruje v ľavom hornom rohu čierne zobarné figúrky a v
+ľavom dolnom rohu biele zobrané figúrky. 
+
+Po ukončení funkcie volá funkciu self.checkCheck() a funkciu self.mateCheck()
+--------------------------------------------------------------------------------------
+
+kingCheckMove(self):
+
+Táto funkcia je využívaná funkciou self.generateMoves(), a kontroluje, či by ťah,
+ktorý vygenerovala funkcia self.movesForBoth() pre kráľa vyústil v šach. Spúšta sa
+jej obsah len v prípade, že zvolená figúrka na pohyb bola kráľ. 
+
+Najprv si uloží hodnotu šachovanosti kráľa, pretože táto hodnota sa pri kontrole 
+šachovanosti políčok, na ktorých kráľ nestojí, zmení. Následne vytvorí zoznam, ktorý 
+obsahuje všetky možné ťahy pre kráľa a postupne kontroluje: 
+
+Ak je možné blokovať šach na ktoromkoľvek z políčok z listu ťahov kráľa, zakáže kráľovi 
+pohyb na toto políčko a taktiež na políčko bodovo symetrické cez kráľa, keďže na oboch 
+by bol šachovaný. Ďalej kontroluje všetky zvyšné políčka v zozname a zisťuje, či by na 
+nich bol kráľ šachovaný, a ak je, pridá toto políčko do zoznamu zakázaných políčok. 
+Následne ak je kráľ momentálne v šachu, zakázané políčka sa pridajú k políčkam, na 
+ktorých je možné šach blokovať, a následne sa všetky políčka, na ktorých je možné šach 
+blokovať invertujú, čím sa získajú všetky legálne ťahy pre kráľa. 
+Ak kráľ naopak šachovaný nie je, tak sa mu iba na pohyb zakážu políčka zo zoznamu 
+zakázaných políčok.
+--------------------------------------------------------------------------------------
+
+kingCheckMoveRevert(self):
+
+Táto funkcia navracia zmeny funkcie self.kingCheckMove() naspäť do pôvodného stavu,
+a je volaná na konci funkcie self.generateMoves() pretože tieto zmeny sú valídne len 
+pri pohybe kráľa.
+--------------------------------------------------------------------------------------
+
+generateMoves(self, xtracheck=None):
+
+Táto funkcia kontroluje, ktoré zo všetkých ťahov vygenerovaných funkciou 
+self.movesForBoth() sú legálne, a tie potom vykreslí na šachovnicu. Od začiatku 
+funkcie najskôr vymaže všetky vygenerované pohyby na šachovnici, nasledovne zavolá 
+funkciu self.kingCheckMove(), po ktorej skontroluje, či bola zvolená figúrka iná ako 
+kráľ, a ak je kráľ šachovaný viac ako jednou nepriateľskou figúrkou, hneď funkciu
+ukončí. 
+Nasledovne začne prechádzať všetky možné pohyby, ktoré vygenerovala funkcia
+self.movesForBoth(), spolu s príznakmi, ktoré s nimi dala do zoznamu všetkých pohybov.
+
+Primárny príznak "move" naznačuje, že nasleduje jeden alebo sled ťahov, do voľného 
+miesta. Pre tento príznak existuje sekundárny príznak "checkBorders", kedy je potrebné
+kontrolovať či ktorýkoľvek ťah nenarazil na pravý alebo ľavý okraj, v ktorom prípade 
+sled ukončí, ako aj v prípade, že narazí na inú figúrku, a nastaví príznak pre pohyby 
+pod "movetake", že už pokračovať nemajú. Pre príznak "move" je aj sekundárny príznak 
+"checkCollision", kedy je sled ťahov vertikálny, a teda treba kontrolovať iba kolíziu
+s inými figúrkami.
+
+Primárny príznak "take" naznačuje, že nasleduje len jeden ťah, ktorý figúrku berie,
+a tento ťah sa nenachádza na konci žiadneho sledu pohybov cez prázdne políčka. Pre
+príznak "take" existuje taktiež sekundárny príznak "checkBorders", kedy treba 
+kontrolovať prejdenie cez ľavý alebo pravý okraj a "checkCollision", kedy toto
+kontrolovať netreba.
+
+Primárny príznak "movetake" naznačuje, že nasleduje jeden ťah, ktorý berie figúrku, a
+tento ťah sa nachádza na konci sledu ťahov. Ak nebol aktivovaný príznak počas sledu
+v sekcii "move", tak sa tento ťah vykreslí.
+
+Primárny príznak "knight" naznačuje, že nasleduje ťah pre jazdca, a teda, čo je
+kontrolované je, či daný pohyb by sa nevykresľoval ďalej od horizontálnej pozície
+jazdca ako 2 políčka, pretože vtedy pretiekol okrajom šachovnice a nie je legálny.
+Má aj sekundárne príznaky "move", kedy je to pohyb na prázdne políčko a "take", ak
+je to pohyb, ktorý berie súperovu figúrku.
+
+Primárny príznak "Castle" naznačuje, že nasleduje pohyb rozšády, kedy nie je potrebná
+žiadna ďalšia kontrola.
+
+Pre všetky vyššie uvedené príznaky sa kontroluje aj: Ak je kráľ šachovaný, či šach blokujú,
+alebo či kráľ šachovaný nie je.
+
+Parameter xtracheck je využívaný pri kontrolách pre Pat, a ak nie je None, všetky pohyby sa
+vymažú, keďže ide o kontrolu, nie o pohyb hráčom.
+
+Po ukončení funkcie volá funkciu self.kingCheckMoveRevert() a ukladá šachovanosť pre text,
+ktorý notifikuje hráča o tom, či je šachovaný.
+--------------------------------------------------------------------------------------
+
+movesForBoth(self, xtracheck=None):
+
+Táto funkcia generuje pre každú zvolenú figúrku všetky jej ťahy, s ktorými potom ďalej 
+pracuje self.generateMoves(), a tiež je využívaná na kontrolu Patu.
+
+Najprv táto funkcia pomocou for cyklu zistí, na akú figúrku bolo kliknuté, a potom
+pre danú figúrku vygeneruje zoznam pohybov.
+
+Po zistení figúrky ju funkcia dočasne vymaže, a skontroluje, či v tomto stave nie je
+kráľ šachovaný. Ak by bol, tak volaním funkcie self.checkCheck() vygeneruje políčka,
+na ktorých je možné šach blokovať a figúrku naspäť vráti. Výsledkom tohto procesu je, 
+že figúrka, ktorá blokuje šach sa nemôže z blokovania uhnúť.
+
+Vždy keď hovorím o pridávaní do zoznamu s príznakom, tak ten zoznam vyzerá takto:
+["primárny príznak", "sekundárny príznak" (nie vždy), [integer hodnota pre políčko ťahu,
+integer hodnota dĺžky binárnej reprezentácie hodnoty políčka ťahu - 1]]
+Zoznam v zozname sa môže vyskytnúť v prípade sledov ťahov vo vonkajšom zozname viackrát,
+a tento vonkajší zoznam je potom pridaný do zoznamu všetkých pohybov.
+
+Ak bolo kliknuté na bieleho pešiaka, do zoznamu je s príznakom "move" pridaný ťah o 1 vpred, 
+a ak na tom políčku nestojí žiadna figúrka, a pešiak sa ešte nepohol, tak aj ťah o 2 vpred.
+Nasledovne skontroluje, či sa diagonálne vpravo a vľavo vyskytujú figúrky, ktoré môže pešiak 
+zobrať, a ak áno, tak pridá aj tieto ťahy do zoznamu s príznakom "take". Ťahy vpred majú
+sekundárny príznak "checkCollision", zatiaľ čo ťahy brania majú sekundárny príznak 
+"checkBorders".
+
+Ak bolo kliknuté na čierneho pešiaka, do zoznamu je s príznakom "move" pridaný ťah o 1 vpred, 
+a ak na tom políčku nestojí žiadna figúrka, a pešiak sa ešte nepohol, tak aj ťah o 2 vpred.
+Nasledovne skontroluje, či sa diagonálne vpravo a vľavo vyskytujú figúrky, ktoré môže pešiak 
+zobrať, a ak áno, tak pridá aj tieto ťahy do zoznamu s príznakom "take". Ťahy vpred majú
+sekundárny príznak "checkCollision", zatiaľ čo ťahy brania majú sekundárny príznak 
+"checkBorders".
+
+Ak bolo kliknuté na jazdca, vygeneruje sa zoznam všetkých možných ťahov pre jazdca, a
+ak je to ťah do prázdneho políčka, pridá ho do zoznamu s príznakom "knight" a sekundárnym
+príznakom "move", ak naopak tento ťah berie figúrku, je pridaný do zoznamu s príznakom "knight" 
+a sekundárnym príznakom "take".
+
+Ak bolo kliknuté na strelca alebo kráľovnú, postupne sa vysielajú diagonálne lúče. Najprv sa
+vyšle vpravo hore, do pomocnej premennej sa pridajú príznaky "move", "checkBorders", a za ne
+všetky ťahy v slede, kým nenarazia na figúrku, alebo spodok, či vrch šachovnice. Po poslednom
+pridanom ťahu sa skontroluje, či sled neukončila súperova figúrka, a ak áno, pridá za sled
+príznak "movetake" a pozíciu tej figúrky, ktorá ukončila sled. Nasledovne vykoná rovnaké
+operácie pre sled ťahov vľavo dole, vľavo hore a vpravo dole.
+
+Ak bolo kliknuté na vežu alebo kráľovnú, postupne sa vysielajú horizontálne a vertikálne lúče. 
+Najprv sa vyšle vľavo, do pomocnej premennej sa pridajú príznaky "move", "checkBorders", a za ne
+všetky ťahy v slede, kým nenarazia na figúrku. Po poslednom pridanom ťahu sa skontroluje, či sled 
+neukončila súperova figúrka, a ak áno, pridá za sled príznak "movetake" a pozíciu tej figúrky, 
+ktorá ukončila sled. Nasledovne vykoná rovnaké operácie pre sled ťahov vpravo. Pre sledy hore a
+dole je celý algoritmus rovnaký, okrem sekundárneho príznaku za "move". Keďže sú tieto pohyby
+vertikálne, tak sekundárny príznak je "checkCollision", keďže cez okraj šachovnice určite neprejde.
+
+Ak bolo kliknuté na kráľa, a na ťahu je biely, tak sa skontroluje, či medzi kráľom a ľavou vežou,
+stoje figúrky, ak nie, či je povolená malá rozšáda, a ak áno, je pridaná do zoznamu s príznakom
+"Castle". Nasledovne sa skontroluje to isté pre veľkú rozšádu. Ak je na ťahu čierny, prebehne
+rovnaká kontrola pre čierne rozšády. Potom sa pre obe farby vygeneruje zoznam s ťahmi pre kráľa,
+cez ktoré sa nasledovne prejde a skontroluje sa či berie figúrku. Ak áno, a ťah nie je vertikálny,
+so zoznamu sa ťah pridá s príznakmi "take", "checkBorders", ak je vertikálny, tak "take", 
+"checkCollision". Nasledovne sa prejde zvyšnými ťahmi a pridajú sa do zoznamu s príznakmi "move",
+"checkCollision" pre vertikálne ťahy a "move", "checkBorders" pre ostatné.
+
+Po ukončení funkcie sa uloží šachovanosť do premennej self.checktxt a zavolá sa funkcia
+self.generateMoves().
+
+Parameter xtracheck je využívaný pri kontrolách pre Pat, a je len posielaný ďalej do funkcie
+self.generateMoves().
+--------------------------------------------------------------------------------------
+
+checkCheck(self, position=None, xtracheck=None):
+
+Táto funkcia kontroluje, či je šachovaný kráľ, prípadne nejaké iné políčko pre kontrolu.
+Najprv si regeneruje rozloženie figúrok na šachovnici, nasledovne kontroluje, či dostala
+pozíciu na šachovnici, čo znamená, že sa jedná o kontrolu a nie o šachovanosť a dá premenným
+príslušné hodnoty. Ak prebieha kontrola počas ťahu šachovaného hráča, tak sa pre kontrolu zmení
+kto je na ťahu.
+
+Nasledovne si vytvorí zoznam, ktorý drží všetky možné ťahy kráľa okolo daného políčka, no tento
+zoznam je použitý len v prípade, že kontrolujeme šachovanosť kráľom. Nasledovne sa vynulujú 
+potrebné premenné a potom začne kontorola šachovanosti: 
+
+Ak je nepriateľský kráľ kdekoľvek na susednom políčku a parameter xtracheck nie je None. Sled
+ťahov vpravo dole a kontrola či na jeho konci je nepriateľský strelec či kráľovná. Sled ťahov
+vpravo a kontrola či na jeho konci je nepriateľská veža alebo kráľovná. Sled ťahov vľavo dole 
+a kontrola či na jeho konci je nepriateľský strelec či kráľovná. Sled ťahov dole a kontrola či 
+na jeho konci je nepriateľská veža alebo kráľovná. Sled ťahov vľavo hore a kontrola či na jeho 
+konci je nepriateľský strelec či kráľovná. Sled ťahov hore a kontrola či na jeho konci je 
+nepriateľská veža alebo kráľovná. Sled ťahov vpravo hore a kontrola či na jeho konci je 
+nepriateľský strelec či kráľovná. Sled ťahov vľavo a kontrola či na jeho konci je nepriateľská 
+veža alebo kráľovná. Samostatné vytvorenie zoznamu s pohybmi jazdca a kontrola šachovanosti
+jazdcom s kontrolou, či ťah jazdca nepreteká cez okraj šachovnice. Samostatná kontrola pre šach
+čiernym a bielym pešiakom.
+
+Ak je parameter xtracheck = 'kingOff', tak kontrolujeme šachovanosť pešiakom inak, pretože blokovať
+pešiak môže, no len pohybom dopredu, nie vyhodením prázdneho políčka. 
+
+Ak je kontrola úspešná a na danom políčku šach je, každá z vyššie uvedených kontrol pripočíta k
+self.checked 1, ak práve tá kontrola šach našla.
+
+Ak sme kontrolovali šachovanosť kráľa, updatuje sa premenná, ktorá vraví o tom, kde je možné šach 
+blokovať. Ak prebieha kontrola počas ťahu šachovaného, je stav ťahu vrátený na pôvodnú hodnotu.
+
+Po ukončení funkcie vracia hodnotu self.checked.
+
+Parameter position sa používa na to, aby sa dala kontrolovať šachovanosť políčok, na ktorých nestojí 
+kráľ. 
+
+Parameter xtracheck môže držať hodnotu "kingOff", kedy nie je kontrolovaná šachovanosť kráľom, pre 
+účely kontroly Matu, alebo hodnotu, ktorá nie je ani "kingOff" ani None, kedy to len znamená, že je
+to kontrola počas ťahu šachovaného hráča.
+--------------------------------------------------------------------------------------
+
+castlesCheck(self):
+
+Táto funkcia po každom ťahu kontroluje, ktoré rozšády sú pre hráčov možné a updatuje ich premenné s
+povoleniami na rozšády podľa toho.
+--------------------------------------------------------------------------------------
+
+promotion(self):
+
+Táto funkcia kontroluje, či posledný ťah vyústil v premenu pešiaka, a nasledovne vykreslí rozhranie,
+na výber figúrky premeny, a zmení phybový stav tak, aby kliknutia mohli vybrať danú figúrku.
+--------------------------------------------------------------------------------------
+
+mateCheck(self, finish=None):
+
+Táto funkcia kontroluje či nastal Mat, Pat, či je na šachovnici dosť figúrok alebo či sa ktorýkoľvek 
+hráč vzdal.
+
+Vytvorí zoznam všetkých možných pohybov kráľa, a skontroluje sa počet figúrok na šachovnici. Niektoré
+premenné, ktoré sa poČas funkcie menia sa uložia.
+
+Prvá kontrola pre Mat prebehne tak, že sa pre každé políčko pohybu kráľa skontroluje, či sa tam pohnúť
+môže. Pred touto kontrolu sa kráľ zo šachovnice na túto kontrolu vymaže, aby sa dali kontrolovať aj políčka
+v zákryte kráľa. Ak aspoň jeden z Ťahov je legálny, Mat nenastal.
+
+Druhá kontrola kontroluje, či ktorékoľvek z políčok, kde je možné šach blokovať, je šachované figúrkou
+rovnakej farby ako je šachovaný kráľ. Ak áno, šach sa dá blokovať a Mat nenastal.
+
+Nasleduje kontrola pre Pat, kedy sa pre každú figúrku danej farby spustí funkcia self.movesForBoth(). Ak
+po prefiltrovaní funkciou self.generateMoves() zostane aspoň 1 legálny ťah, Pat nenastal.
+
+Nasledovne sa skontroluje, ktoré figúrky na šachovnici sú, v prípade, že je ich 4 alebo menej. Podľa pravidiel
+šachu zistíme, či sa tieto figúrky rátajú ako primálo materiálu, a ak áno, nastáva v podstate Pat, alebo remíza.
+
+Ak nastala ktorákoľvek s podmienok, vykreslí sa tabulka na ukončenie hry, s tlačítkom na novú hru a zavretie
+rozhrania. Ak nastal Mat, alebo sa hráč vzdal, tak sa vypíše príslušný text: WHITE WINS/BLACK WINS. Ak zostalo
+na šachovnici primálo materiálu, alebo nastal Pat, vykreslí sa text: DRAW.
+
+Parameter finish posiela funkcia self.resign(), a ak je 1, tak hra sa automaticky ukončí.
+--------------------------------------------------------------------------------------
+
+click(self, event):
+
+Táto funkcia rieši všetky kliknutia, okrem kliknutí na tlačidlá. Na začiatku si vždy inicializuje potrebné 
+premenné o súradniciach kliknutia, skontroluje, či sa nekliklo mimo šachovnice a pokračuje podľa pohybového
+stavu.
+
+Ďalej pohybové stavy podľa poradia, ako sa nachádzajú vo funkcii.
+
+Ak je pohybový stav 2, tak to znamená, že prebieha rozšáda, a teda sa rozšáda prevedie a stav sa zmení na 3,
+aby sa pri zvolení figúrku hneď nezačal ďalší ťah.
+
+Ak je pohybový stav 1, tak sa najprv skontroluje, či ťah nie je rozšáda, a ak áno, prevedie sa príslušný pohyb.
+Nasledovne sa prechádza cez všetky ťahy, ktoré súperovi berú figúrku, ktoré funkcia self.generateMoves() 
+zhodnotila ako legálne, a ak bolo kliknuté na jeden z nich, tak sa daný ťah prevedie. Potom sa prejde cez všetky 
+legálne ťahy na prázdne políčko, ak ťah, na ktorý bolo kliknuté figúrku neberie. Ak bolo kliknuté mimo ťahov,
+phybový stav sa mení na 0, ak sa nerovná 3, a mažú sa ťahy už vykreslené. Tu sa skontroluje aj či predošlý ťah 
+nevyústil v premenu pešiaka.
+
+Ak je pohybový stav 0, tak sa spúšťa generovanie ťahov pre zvolenú figúrku.
+
+Ak je pohybový stav 3, mení sa na 0.
+
+Koncom funkcie sa vykresľuje text informujúci hráčov o tom, kto je na ťahu, prípadne text informujúci o šachovanosti.
+
+Parameter event je súcasťou kliknutia a obsahuje jeho súradnice. 
+--------------------------------------------------------------------------------------
+
+flip(self, zero=None):
+
+Táto funkcia mení, kto je na ťahu.
+
+Parameter zero je možné sem poslať, ak je potrebný konkrétny pohybový stav.
+--------------------------------------------------------------------------------------
+
+resign(self):
+
+Táto funkcia povoluje hráčovi sa vzdať.
+
+Zmení kto je na ťahu, kvôli správnosti textu, a zašle do funkcie self.mateCheck() parameter finish,
+ktorý hneď ukončí hru.
+
+
+
+
+
